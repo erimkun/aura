@@ -1,0 +1,12 @@
+{
+  "name": "Aura AI Hair Stylist",
+  "description": "Next-generation AI hair styling engine powered by Google Gemini and MediaPipe. Features smart scanning, forehead detection, and AI-powered style visualization.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "AI Image Generation",
+    "Computer Vision",
+    "Augmented Reality"
+  ]
+}
