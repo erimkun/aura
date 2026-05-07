@@ -64,5 +64,18 @@ CRITICAL INSTRUCTIONS:
 
 **Geliştirme Planı:** Gelecek fazda, backend (Python FastAPI) entegrasyonu ile SAM checkpointleri kullanılarak milimetrik maske çıkartılıp Imagen 3 API'sine beslenecektir.
 
-## 5. Donanım ve Performans
-- **RTX 4070 Kullanımı:** Proje tarayıcı tabanlı olduğu için ekran kartın sadece MediaPipe Landmark tespiti ve Canvas çizimi için kullanılır. Ağır işlemler API (Vertex AI) üzerinden yürütülür.
+## 5. MediaPipe Nasıl Çalışıyor? (API mi?)
+MediaPipe **API üzerinden çalışmaz**. Tamamen **Client-Side (Yerel)** olarak senin tarayıcında ve cihazının kendi gücünü (CPU/WebGL/GPU) kullanarak çalışır.
+
+Kameralardan gelen saniyelik 30/60 karelik verileri internet üzerinden bir sunucuya göndermek çok yavaş olacağı için, MediaPipe (`@mediapipe/face_mesh`) kafa yapısını, alın çizgilerini ve göz koordinatlarını direkt senin bilgisayarında saniyenin binde biri hızında işler. Böylece veri gizliliği (kullanıcı onayı olmadan fotoğraf internete gitmez) ve sıfır gecikme sağlanır.
+
+## 6. Gemini API Anahtarı (API Key) Nerede Gizli?
+Projeyi incelerseniz hiçbir yerde doğrudan bir "AIzaSy..." API anahtarı dizisi göremezsiniz. Bu, güvenlik için alınan **modern mimari standartlarından** biridir.
+
+Sistem şöyle entegre çalışır:
+- **`src/lib/gemini.ts` ve `vite.config.ts`**: Kodun içinde API anahtarı `process.env.GEMINI_API_KEY` ortam değişkeni (Environment Variable) üzerinden çağrılır.
+- **AI Studio Entegrasyonu**: Uygulama AI Studio üzerinde çalışırken, bu platform senin "Secrets/Ayarlar" bölümündeki gizli Gemini anahtarını alır ve uygulamayı canlıya alırken arka planda **otomatik ve güvenli bir şekilde enjekte eder.**
+- **Lokal (Kendi Bilgisayarın İçin)**: Eğer projeyi indirip VS Code vb. ile geliştirirsen, projede bulunan `.env.example` dosyasının adını `.env` yapıp içine kendi gizli anahtarını yapıştırman gerekir. Böylece anahtarın asla koda (ve GitHub vb. yerlere) sızmaz.
+
+## 7. Donanım ve Performans
+- **RTX 4070 Kullanımı:** Proje tarayıcı tabanlı olduğu için ekran kartın sadece MediaPipe Landmark tespiti ve Canvas çizimi için kullanılır. Ağır işlemler AI API'leri (Gemini Generation) üzerinden yürütülür.
