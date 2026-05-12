@@ -16,10 +16,12 @@ Bu belge, "AI Hair Stylist" (Aura) projesinin mevcut durumunu ve ileride yapıla
 
 ## 🟡 GELECEK ADIMLAR VE YAPILACAKLAR (ROADMAP)
 
-### FAZ 2: Milimetrik Maskeleme (SAM & Özel Backend Entegrasyonu)
-Saç boyama ve kesme simülasyonlarında arkaplan/yüz bozulmalarını sıfıra indirmek için özel maskeleme hattı eklenecek.
-- **Python FastAPI API:** Görüntü işleme yükünü tarayıcıdan alacak yüksek performanslı backend mimarisinin kurulması.
-- **Segment Anything (SAM) Devreye Alınması:** Kullanıcının kafa formundan sadece saçlık bölgeyi piksel piksel algılayacak "Hard Mask" (Sert Maske) sisteminin kurulması. 
+### FAZ 2: Prompt Quality & Backend Generation Proxy
+Saç boyama ve kesme simülasyonlarında ilk hedef, SAM gibi ağır bir maskeleme katmanı kurmadan önce yapay zeka modeline daha kontrollü, teknik ve kimlik korumalı komutlar vererek çıktı kalitesini yükseltmek.
+- **Backend Proxy:** Gemini çağrıları tarayıcıdan çıkarılıp Express tabanlı `/api/generate-style` endpoint'i arkasına alınacak. API anahtarı yalnızca sunucu ortam değişkeninde tutulacak.
+- **Salon Teknik Brifingi:** Kullanıcının kısa stil isteği önce saç kesimi, renk, hacim, doku, ışık ve doğal saç çizgisi birleşimi açısından detaylandırılmış profesyonel prompta çevrilecek.
+- **Kimlik Koruma Kuralları:** Final görsel promptunda yüz, deri dokusu, mimik, arka plan, kıyafet, kulak, kaş ve gözlerin değiştirilmemesi açık negatif talimatlarla belirtilecek.
+- **SAM Opsiyonel Katman:** Eğer bu prompt/proxy hattı saç bölgesini yeterince kontrollü değiştiremezse, SAM veya benzeri hard-mask sistemi Faz 2.5 olarak yeniden değerlendirilecek.
 
 ### FAZ 3: Hareketli Video Üretimi (Google Veo)
 Fotoğrafın ötesine geçerek kullanıcının o saçla hareketli halini simüle etmek.

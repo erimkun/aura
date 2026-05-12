@@ -6,8 +6,8 @@ Bu döküman, AURA uygulamasının teknik mimarisini, yapay zeka prompt strateji
 Uygulama, "Client-Side Intelligence" ve "Server-Side Generation" hibrit modelini kullanır.
 
 - **Computer Vision:** MediaPipe Face Mesh (Alın tespiti ve landmark takibi).
-- **LLM Layer:** Gemini 3 Flash-Preview (User prompt expansion).
-- **Vision Layer:** Gemini 2.5 Flash-Image (Neural Inpainting & Segment-Aware Modification).
+- **LLM Layer:** Server-side Gemini prompt expansion (User prompt to salon technical brief).
+- **Vision Layer:** Server-side Gemini 2.5 Flash-Image / optional Pro quality mode (Prompt-driven hair edit without SAM by default).
 - **UI/UX:** React + Tailwind + Canvas API (Background Neural Flow).
 
 ## 2. Arka Plan (Canvas) Animasyonu
@@ -73,9 +73,9 @@ Kameralardan gelen saniyelik 30/60 karelik verileri internet üzerinden bir sunu
 Projeyi incelerseniz hiçbir yerde doğrudan bir "AIzaSy..." API anahtarı dizisi göremezsiniz. Bu, güvenlik için alınan **modern mimari standartlarından** biridir.
 
 Sistem şöyle entegre çalışır:
-- **`src/lib/gemini.ts` ve `vite.config.ts`**: Kodun içinde API anahtarı `process.env.GEMINI_API_KEY` ortam değişkeni (Environment Variable) üzerinden çağrılır.
-- **AI Studio Entegrasyonu**: Uygulama AI Studio üzerinde çalışırken, bu platform senin "Secrets/Ayarlar" bölümündeki gizli Gemini anahtarını alır ve uygulamayı canlıya alırken arka planda **otomatik ve güvenli bir şekilde enjekte eder.**
-- **Lokal (Kendi Bilgisayarın İçin)**: Eğer projeyi indirip VS Code vb. ile geliştirirsen, projede bulunan `.env.example` dosyasının adını `.env` yapıp içine kendi gizli anahtarını yapıştırman gerekir. Böylece anahtarın asla koda (ve GitHub vb. yerlere) sızmaz.
+- **`server.ts`**: Gemini SDK yalnızca Express backend proxy içinde çalışır. Frontend doğrudan Google SDK veya API key kullanmaz.
+- **`src/lib/gemini.ts`**: Tarayıcı tarafında sadece `/api/generate-style` endpoint'ine istek atan ince bir client wrapper bulunur.
+- **Lokal (Kendi Bilgisayarın İçin)**: `.env.example` dosyasını `.env` yapıp `GEMINI_API_KEY` değerini buraya koymak gerekir. Anahtar browser bundle'a yazılmaz.
 
 ## 7. Donanım ve Performans
 - **RTX 4070 Kullanımı:** Proje tarayıcı tabanlı olduğu için ekran kartın sadece MediaPipe Landmark tespiti ve Canvas çizimi için kullanılır. Ağır işlemler AI API'leri (Gemini Generation) üzerinden yürütülür.

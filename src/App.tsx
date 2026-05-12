@@ -24,7 +24,7 @@ import {
   X
 } from 'lucide-react';
 import { faceMesh } from '@/src/lib/faceDetection';
-import { expandStylingPrompt, generateStyledHair } from '@/src/lib/gemini';
+import { generateStyledHair, type QualityMode } from '@/src/lib/gemini';
 
 // --- Types ---
 type ScanStep = 'front' | 'side-right' | 'side-left' | 'back' | 'complete';
@@ -107,6 +107,10 @@ export default function App() {
   const [processing, setProcessing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [userPrompt, setUserPrompt] = useState("");
+  const [expandedPrompt, setExpandedPrompt] = useState("");
+  const [generationError, setGenerationError] = useState("");
+  const [modelUsed, setModelUsed] = useState("");
+  const [qualityMode, setQualityMode] = useState<QualityMode>('fast');
   
   const webcamRef = useRef<Webcam>(null);
 
@@ -156,12 +160,27 @@ export default function App() {
   const handleGenerate = async () => {
     if (!userPrompt || !photos['front']) return;
     setProcessing(true);
+    setGenerationError("");
     try {
-      const expanded = await expandStylingPrompt(userPrompt);
-      const result = await generateStyledHair(photos['front'].split(',')[1], "", expanded);
-      if (result) setResultImage(result);
+      const result = await generateStyledHair({
+        imageBase64: photos['front'].split(',')[1],
+        userPrompt,
+        scanStep: 'front',
+        qualityMode,
+      });
+      setResultImage(result.imageDataUrl);
+      setExpandedPrompt(result.expandedPrompt);
+      setModelUsed(result.modelUsed);
+      if (result.warnings?.length) {
+        setGenerationError(result.warnings.join(' '));
+      }
     } catch (err) {
       console.error(err);
+      setGenerationError(
+        err instanceof Error
+          ? err.message
+          : 'Style generation failed. Please try again.',
+      );
     } finally {
       setProcessing(false);
     }
@@ -171,6 +190,9 @@ export default function App() {
     setPhotos({});
     setStep('front');
     setResultImage(null);
+    setExpandedPrompt("");
+    setGenerationError("");
+    setModelUsed("");
   };
 
   return (
@@ -237,7 +259,7 @@ export default function App() {
             key="app"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative z-10 pt-6 px-4 md:px-8 pb-20 max-w-7xl mx-auto"
+            className="relative z-10 pt-5 px-4 md:pt-6 md:px-8 pb-28 max-w-7xl mx-auto"
           >
             {/* Header */}
             <header className="flex items-center justify-between gap-4 mb-8">
@@ -257,7 +279,7 @@ export default function App() {
               
               {/* Capture Column */}
               <div className="lg:col-span-8 space-y-6">
-                <div className="relative aspect-square md:aspect-video bg-black rounded-[32px] overflow-hidden border border-white/10 shadow-2xl group/camera">
+                <div className="relative aspect-square md:aspect-video bg-black rounded-3xl md:rounded-[32px] overflow-hidden border border-white/10 shadow-2xl group/camera">
                   {step !== 'complete' ? (
                     <>
                       <Webcam
@@ -278,15 +300,15 @@ export default function App() {
                       {/* Scanning Overlays */}
                       <div className="absolute inset-0 pointer-events-none">
                         {/* Corner Brackets */}
-                        <div className="absolute top-6 left-6 w-8 h-8 border-t border-l border-white/20 rounded-tl-lg" />
-                        <div className="absolute top-6 right-6 w-8 h-8 border-t border-r border-white/20 rounded-tr-lg" />
-                        <div className="absolute bottom-6 left-6 w-8 h-8 border-b border-l border-white/20 rounded-bl-lg" />
-                        <div className="absolute bottom-6 right-6 w-8 h-8 border-b border-r border-white/20 rounded-br-lg" />
+                        <div className="absolute top-4 left-4 md:top-6 md:left-6 w-7 h-7 md:w-8 md:h-8 border-t border-l border-white/20 rounded-tl-lg" />
+                        <div className="absolute top-4 right-4 md:top-6 md:right-6 w-7 h-7 md:w-8 md:h-8 border-t border-r border-white/20 rounded-tr-lg" />
+                        <div className="absolute bottom-4 left-4 md:bottom-6 md:left-6 w-7 h-7 md:w-8 md:h-8 border-b border-l border-white/20 rounded-bl-lg" />
+                        <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 w-7 h-7 md:w-8 md:h-8 border-b border-r border-white/20 rounded-br-lg" />
 
                         {/* Neural Scanning HUD */}
-                        <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10">
+                        <div className="absolute top-3 left-1/2 w-[calc(100%-4rem)] max-w-[18rem] -translate-x-1/2 flex items-center justify-center gap-2 bg-black/45 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 md:top-6 md:w-auto md:max-w-none md:gap-3 md:px-4">
                             <Layers className="w-3 h-3 text-orange-500 animate-pulse" />
-                            <span className="text-[9px] font-mono tracking-widest text-white/60">NEURAL SEGMENTATION ACTIVE</span>
+                            <span className="truncate text-[8px] font-mono tracking-widest text-white/60 md:text-[9px]">NEURAL SEGMENTATION ACTIVE</span>
                         </div>
 
                         {/* Scanning Beam */}
@@ -299,25 +321,25 @@ export default function App() {
                       </div>
 
                       {/* Status HUD */}
-                      <div className="absolute top-8 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center gap-4">
+                      <div className="absolute top-12 left-1/2 w-[calc(100%-3rem)] max-w-[19rem] -translate-x-1/2 px-3 py-2 rounded-2xl bg-black/45 backdrop-blur-md border border-white/10 flex items-center justify-center gap-3 md:top-16 md:w-auto md:max-w-none md:rounded-full md:px-6 md:gap-4">
                          <div className="flex items-center gap-2">
                            <div className={`w-2 h-2 rounded-full ${isForeheadClear ? 'bg-orange-500' : 'bg-red-500'}`} />
-                           <span className="text-[10px] uppercase font-mono tracking-widest leading-none">
+                           <span className="text-[9px] uppercase font-mono tracking-widest leading-none md:text-[10px]">
                              {step.replace('-', ' ')} Target
                            </span>
                          </div>
                          <div className="w-[1px] h-3 bg-white/10" />
-                         <span className="text-[10px] uppercase font-mono tracking-widest text-white/40 leading-none">
+                         <span className="text-[9px] uppercase font-mono tracking-widest text-white/40 leading-none md:text-[10px]">
                            Align Required
                          </span>
                       </div>
 
-                      <div className="absolute bottom-10 left-10 right-10 flex justify-between items-center">
-                        <div className="space-y-1">
-                            <span className="text-[8px] uppercase font-mono tracking-[0.3em] text-white/40">Diagnostic Feedback</span>
+                      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end gap-3 md:bottom-10 md:left-10 md:right-10 md:items-center">
+                        <div className="min-w-0 max-w-[calc(100%-5.25rem)] space-y-1 rounded-2xl bg-black/25 px-3 py-2 backdrop-blur-sm md:max-w-none md:bg-transparent md:p-0 md:backdrop-blur-none">
+                            <span className="block truncate text-[7px] uppercase font-mono tracking-[0.2em] text-white/40 md:text-[8px] md:tracking-[0.3em]">Diagnostic Feedback</span>
                             <div className="flex items-center gap-2 text-white/80">
                                 {isForeheadClear ? <CheckCircle2 className="w-4 h-4 text-orange-500" /> : <AlertCircle className="w-4 h-4 text-red-500" />}
-                                <span className="text-xs font-bold uppercase tracking-tight">
+                                <span className="truncate text-[10px] font-bold uppercase tracking-normal md:text-xs">
                                     {isForeheadClear ? 'Face Analysis: COMPATIBLE' : 'ERROR: POOR LIGHTING'}
                                 </span>
                             </div>
@@ -328,8 +350,8 @@ export default function App() {
                           className="relative group p-1"
                         >
                           <div className="absolute inset-0 bg-orange-500 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                          <div className="relative bg-white text-black w-20 h-20 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-2xl">
-                             <CameraIcon className="w-10 h-10" />
+                          <div className="relative bg-white text-black w-16 h-16 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-2xl md:w-20 md:h-20">
+                             <CameraIcon className="w-8 h-8 md:w-10 md:h-10" />
                           </div>
                         </button>
                       </div>
@@ -395,7 +417,7 @@ export default function App() {
                             <Layers className="w-5 h-5" />
                         </div>
                         )}
-                        <div className="absolute bottom-1 left-2 text-[6px] uppercase font-bold tracking-widest text-white/40">
+                        <div className="absolute bottom-1 left-2 text-[7px] uppercase font-bold tracking-widest text-white/40">
                             {s.split('-')[0]}
                         </div>
                     </div>
@@ -405,7 +427,7 @@ export default function App() {
 
               {/* Controls Column */}
               <div className="lg:col-span-4 space-y-6">
-                <section className="bg-white/5 border border-white/10 p-6 md:p-8 rounded-[32px] space-y-6">
+                <section className="bg-white/5 border border-white/10 p-5 md:p-8 rounded-3xl md:rounded-[32px] space-y-6">
                   <div className="flex items-center gap-3 text-orange-500">
                       <Scissors className="w-5 h-5" />
                       <h2 className="font-bold uppercase tracking-tight text-sm">Style Configuration</h2>
@@ -416,9 +438,56 @@ export default function App() {
                         className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm focus:outline-none focus:border-orange-500/50 transition-all h-32 resize-none placeholder:text-white/10"
                         placeholder="Describe your desired style..."
                         value={userPrompt}
-                        onChange={(e) => setUserPrompt(e.target.value)}
+                        onChange={(e) => {
+                          setUserPrompt(e.target.value);
+                          setGenerationError("");
+                        }}
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-black/30 p-1 border border-white/5">
+                    {(['fast', 'pro'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setQualityMode(mode)}
+                        className={`rounded-xl py-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                          qualityMode === mode
+                            ? 'bg-orange-600 text-white shadow-[0_0_20px_rgba(234,88,12,0.25)]'
+                            : 'text-white/35 hover:text-white'
+                        }`}
+                      >
+                        {mode === 'fast' ? 'Fast' : 'Pro'}
+                      </button>
+                    ))}
+                  </div>
+
+                  {expandedPrompt && (
+                    <div className="space-y-2 rounded-2xl border border-white/10 bg-black/30 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[9px] font-mono uppercase tracking-[0.25em] text-orange-500">
+                          AI Interpretation
+                        </span>
+                        {modelUsed && (
+                          <span className="shrink-0 text-[8px] font-mono uppercase tracking-widest text-white/25">
+                            {modelUsed}
+                          </span>
+                        )}
+                      </div>
+                      <p className="line-clamp-4 text-xs leading-relaxed text-white/45">
+                        {expandedPrompt}
+                      </p>
+                    </div>
+                  )}
+
+                  {generationError && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-red-100">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+                      <p className="text-xs font-medium leading-relaxed">
+                        {generationError}
+                      </p>
+                    </div>
+                  )}
 
                   <button 
                     onClick={handleGenerate}
@@ -446,7 +515,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Persistent Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-t border-white/5 px-8 py-3 flex justify-between items-center z-[100]">
+      <footer className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-xl border-t border-white/5 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex justify-center md:justify-between items-center z-[100] md:px-8">
           <div className="flex items-center gap-8 text-[9px] font-mono text-white/20 uppercase tracking-[0.2em]">
             <span className="hidden md:flex items-center gap-2">
                 <div className="w-1 h-1 bg-orange-500 rounded-full animate-pulse" />
@@ -457,7 +526,7 @@ export default function App() {
                 Neural Masking: Hardware Accel
             </span>
           </div>
-          <div className="text-[9px] font-mono text-white/20 uppercase tracking-widest">
+          <div className="text-center text-[9px] font-mono text-white/20 uppercase tracking-widest">
             Aura Neuro-Tech Labs © 2026
           </div>
       </footer>
