@@ -5,6 +5,9 @@ import express, {type Request, type Response} from 'express';
 import path from 'path';
 import {fileURLToPath} from 'url';
 import {createServer as createViteServer} from 'vite';
+import https from 'https';
+import selfsigned from 'selfsigned';
+import {networkInterfaces} from 'os';
 
 type QualityMode = 'fast' | 'pro';
 
@@ -209,6 +212,7 @@ if (isProduction) {
 } else {
   const vite = await createViteServer({
     server: {
+      host: true,
       middlewareMode: true,
       hmr:
         process.env.DISABLE_HMR === 'true'
@@ -221,5 +225,5 @@ if (isProduction) {
 }
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Aura server running at http://127.0.0.1:${port}/`);
+  console.log(`Aura server running at http://0.0.0.0:${port}/`);
 });
