@@ -1,4 +1,4 @@
-# AURA Engine v5 - Serverless API Tabanlı 3 Aşamalı AI & AR Stratejisi
+# AURA Engine v5.1 - Serverless API Tabanlı 3 Aşamalı AI & AR Stratejisi
 
 Bu doküman, AURA'nın kullanıcıların saç modellerini en gerçekçi şekilde deneyimleyebilmesi için planlanan **3 Fazlı (Fotoğraf, Video, Canlı AR)** mimarinin, **kendi GPU sunucumuzu kurmadan tamamen API ve Cloud Serverless çözümlerle** nasıl hayata geçirileceğini açıklar.
 
@@ -16,9 +16,9 @@ AURA, saç modeli deneme işini 3 farklı seviyede sunar:
 
 ### A. Faz 1: Yüz Kimliğini Koruyan Saç Fotoğrafları (ControlNet / IP-Adapter API'leri)
 Kişinin yüzünün aynen kalması için "ControlNet" veya "IP-Adapter/PhotoMaker" teknolojileri şarttır. Bunu kendi sunucumuz olmadan şu API'ler ile çözebiliriz:
-*   **Replicate API / Fal.ai / Banana.dev:** Bu platformlarda Stable Diffusion (SDXL) tabanlı ve **ControlNet (FaceID) destekli hazır API uç noktaları** bulunur. 
-*   **Nasıl Çalışır?** React (Vite) istemcisinden fotoğrafınızı backend'inize (server.ts) ordan da doğrudan Replicate/Fal.ai API'sine (Örn: `puLID` veya `FaceID` uç noktasına) atarsınız. API size saniyeler içinde kişinin kendi yüzüyle yeni saçlı halinin URL'sini döner.
-*   **Gemini 2.5 Pro Vision/Flash kullanımı:** Görseli detaylı analiz edip en doğru "text prompt"u (istemi) üretmek için kullanılır. Ama asıl görsel üretimi SDXL/ControlNet API üzerinden yapılır.
+*   **Replicate / Segmind / Baseten:** Bu platformlarda Stable Diffusion (SDXL/Flux) tabanlı ve **ControlNet (FaceID) destekli hazır API uç noktaları** bulunur. 
+*   **Nasıl Çalışır?** React (Vite) istemcisinden fotoğrafınızı backend'inize (server.ts) ordan da doğrudan API'ye (Örn: Replicate veya Segmind `puLID` uç noktasına) atarsınız. API size saniyeler içinde kişinin kendi yüzüyle yeni saçlı halinin URL'sini döner.
+*   **Gemini 2.5 Pro Vision/Flash kullanımı:** Görseli detaylı analiz edip en doğru "text prompt"u (istemi) üretmek için kullanılır. Ama asıl görsel üretimi GPU API üzerinden yapılır.
 
 ### B. Faz 2: Saç Modeli Videolarının Üretimi
 Video üretimi maliyetli bir iştir ancak API servisleriyle gayet mümkündür:
@@ -27,20 +27,20 @@ Video üretimi maliyetli bir iştir ancak API servisleriyle gayet mümkündür:
 *   **Nasıl Çalışır?** Faz 1'deki sonuç üzerinden backend bir API çağrısı yapar. Video genelde 1-3 dakika içinde oluşur, bu sürede ön yüzde `NeuralCanvas` animasyonu ile kullanıcı bekletilir.
 
 ### C. Faz 3: Gerçek Zamanlı AI (Live AR Serverless)
-Gerçek zamanlı kullanım için kendi bilgisayarımızın GPU'su yetersizse veya sunucu alamıyorsak, **Real-Time GenAI WebSocket API** kullanırız.
-*   **Fal.ai Real-Time API:** Fal.ai platformu, özel bir gecikmesiz ağ üzerinden "Stable Diffusion Turbo" veya "LCM (Latent Consistency Models)" çalıştırmanıza izin verir.
+Gerçek zamanlı ("Live AR") kullanım için, 100-200ms gecikmeyle (WebSocket tabanlı) tepki verecek **Real-Time Inference** altyapılarına ihtiyacımız var.
+*   **Modal.com / Baseten / RunPod Serverless:** Bu platformlar, WebSocket üzerinden canlı olarak "Stable Diffusion Turbo" veya "LCM (Latent Consistency Models)" modellerine görüntü akışı ("Stream") göndermenize olanak tanır.
 *   **Nasıl Çalışır:**
     1.  Kamera saniyede 15-30 kez (FPS) frame çeker.
-    2.  Kareler WebRTC veya fal.ai `WebSocket (ws://)` bağlantısı ile direkt buluta gönderilir.
-    3.  Cloud GPU anında (100ms altı sürede) saçı Inpaint yapıp (gerekirse IP-Adapter ile) geri yollar. O kadar hızlıdır ki, sanki kendi bilgisayarınızda çalışıyor gibi görünür.
-*   **Ayrıca Gemini Nano:** Nano on-device (cihazda yerel) çalışır ancak şu anki kapasitesi ağır Inpainting/AR renderından ziyade, anlık konuşma, metin analizidir. Dolayısıyla görsel renderını Real-time WebSocket API'ye bırakmak en iyisidir.
+    2.  Kareler WebRTC veya Modal/RunPod `WebSocket (ws://)` bağlantısı ile direkt buluta gönderilir.
+    3.  Cloud Serverless GPU anında (100ms altı sürede) saçı Inpaint yapıp (gerekirse hafif bir ControlNet ile) RGB kare olarak geri yollar. O kadar hızlıdır ki, sanki kendi bilgisayarınızda çalışıyor gibi görünür.
+*   **Ayrıca Gemini Nano:** Nano on-device (cihazda yerel) çalışır ancak şu anki kapasitesi ağır Inpainting/AR renderından ziyade, anlık konuşma, metin analizidir. Dolayısıyla görsel renderını Live AI API'lerine bırakmak en iyisidir.
 
 ---
 
 ## 3. Geliştirme Yol Haritası (Serverless MVP İçin)
 
 **Adım 1: Stüdyo Modu (Fotoğraf) - Hazır API Entegrasyonu**
-*   **Replicate** veya **Fal.ai** üzerinde `SDXL + PuLID/IP-Adapter` modeli bulunur.
+*   **Replicate** veya **Segmind** üzerinde `SDXL + PuLID/IP-Adapter` modeli bulunur.
 *   Sistem, kullanıcının resmini ve Gemini'nin ürettiği Prompt'u IP-Adapter API'sine yollar, orijinal yüzle farklı saç modeli resmini alır.
 *   Maliyet sadece API isteği başınadır (0.01$ - 0.03$).
 
@@ -49,5 +49,5 @@ Gerçek zamanlı kullanım için kendi bilgisayarımızın GPU'su yetersizse vey
 *   Hafif bir saç sallanması promptu ile (sinematik hava) video elde edilip UI'a basılır.
 
 **Adım 3: Canlı AR Modu (Real-Time WebSocket) Entegrasyonu**
-*   Kendi sunucumuz yerine **Fal.ai'nin Realtime LCM API'si** kurulur.
+*   **Modal.com** veya **RunPod** üzerinde WebSocket tabanlı LCM/SDXL-Turbo api'si kurulur (Hazır şablonları mevcuttur).
 *   Kameradan sadece saç bölgesini maskelemek için (Eğer API maske istiyorsa) tarayıcıda `@mediapipe/image_segmentation` ile çok hızlı (0 maliyetli) saç maskesi çıkarılıp bu maske + kamera görüntüsü buluta WS ile saniyelik olarak atılır. Buluttan canlı AR görüntüsü çekilir.
